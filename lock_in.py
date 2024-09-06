@@ -6,8 +6,8 @@ from blessed import Terminal
 def choose_quote() -> str: 
     return "Those who do not get their hands dirty are wrong."
 
-def get_time_remaining(end= datetime.datetime.now().replace(hour=16, minute=30, second=0, microsecond=0)):
-    return str(end-datetime.datetime.now())[:-7]
+def get_time_remaining(end = datetime.datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)):
+    return end-datetime.datetime.now()
 
 def pretty_print_timedelta(td):
     hours, remainder = divmod(td.seconds, 3600)
@@ -20,6 +20,7 @@ def pretty_print_timedelta(td):
     else:
         return f"{seconds}s"
 
+
 def main():
     start_time = datetime.datetime.now()
 
@@ -31,14 +32,22 @@ def main():
     
     print(term.black_on_darkkhaki(term.center(choose_quote())))
 
-    
+    time_remaining = datetime.timedelta(1000000)
     inp = None
     with term.cbreak(), term.hidden_cursor(), term.location(): 
         while term.inkey(timeout=0.02) != 'q':
 
             print(term.home())
             print(term.move_y(term.height//2))
-            print(term.black_on_darkkhaki(term.center(f'Time remaining: {get_time_remaining()}')))
+
+
+            time_remaining = get_time_remaining()
+
+            if time_remaining.total_seconds() < 0:
+                print(term.black_on_red(term.center("your time is up, go to work")))
+                break
+            
+            print(term.black_on_darkkhaki(term.center(f'Time remaining: {str(time_remaining)[:-7]}')))
 
 
 
