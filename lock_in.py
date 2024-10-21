@@ -1,11 +1,25 @@
 #!/usr/local/bin/python3
 import csv
 import datetime
+import os
+import random
+import re 
+import textwrap
 
 from blessed import Terminal
 
 def choose_quote() -> str: 
-    return "Those who do not get their hands dirty are wrong."
+    quotes_path = os.getenv("QUOTES_LOCATION") # Should be markdown backtick block quotes
+
+    with open(quotes_path, 'r', encoding='utf-8') as f:
+        markdown_content = f.read()
+        
+        pattern = r'\`\`\`\n(.*?)\n\`\`\`'
+        quotes_unclean = re.findall(pattern, markdown_content, re.MULTILINE | re.DOTALL)
+        quotes = [quote.strip() for quote in quotes_unclean]
+
+        return random.choice(quotes)
+    return "Couldn't read quotes - lock_in.py"
 
 def get_time_remaining(end = datetime.datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)):
     return end-datetime.datetime.now()
@@ -21,46 +35,49 @@ def pretty_print_timedelta(td):
     else:
         return f"{seconds}s"
 
-
 def main():
     start_time = datetime.datetime.now()
 
     # Set up Gui
     term = Terminal()
+    print(term.home + term.clear)
 
-    print(term.home + term.clear + term.move_y((term.height // 2)-1))
+    # Calculate the position for the top third
+    top_third_row = term.height // 3
+    lines = textwrap.wrap(choose_quote(), term.width)
+    vertical_offset = len(lines) // 2 
 
-    
-    print(term.black_on_darkkhaki(term.center(choose_quote())))
+    # Print each line centered in the top third
+    for i, line in enumerate(lines):
+        with term.location(y=top_third_row - vertical_offset + i):
+            print(term.center(line))
 
+    #Time remaining
+    print(term.move_y((term.height // 2)-1))
     time_remaining = datetime.timedelta(1000000)
+    
     inp = None
     with term.cbreak(), term.hidden_cursor(), term.location(): 
         while term.inkey(timeout=0.02) != 'q':
-
             print(term.home())
             print(term.move_y(term.height//2))
-
 
             time_remaining = get_time_remaining()
 
             if time_remaining.total_seconds() < 0:
-                print(term.black_on_red(term.center("your time is up, go to work")))
+                print(term.black_on_red(term.center("your time is up, if only there was more.")))
                 break
             
             print(term.black_on_darkkhaki(term.center(f'Time remaining: {str(time_remaining)[:-7]}')))
-
-
 
     end_time = datetime.datetime.now()
     time_worked = end_time-start_time
     print(term.move_down(2) + f'You worked for {pretty_print_timedelta(time_worked)}' )
 
-    
+
     with open("/Users/Harry/org/caverns/data/deep_work.csv", "a") as f:
         writer = csv.writer(f)
         writer.writerow([start_time, time_worked.total_seconds()])
-
 
     print(f'Saved to logs.' )
     
