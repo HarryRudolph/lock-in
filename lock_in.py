@@ -1,4 +1,5 @@
 #!/usr/local/bin/python3
+import argparse 
 import csv
 import datetime
 import os
@@ -7,6 +8,20 @@ import re
 import textwrap
 
 from blessed import Terminal
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="A script that takes debug mode and time as arguments.")
+    
+    # Add debug mode argument
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
+    
+    # Add time argument
+    parser.add_argument('-t', '--time', type=int, choices=range(1, 25), 
+                        metavar="[1-24]", default=8,
+                        help='Specify a time (integer between 1 and 24)')
+    
+    return parser.parse_args()
+
 
 def choose_quote() -> str: 
     quotes_path = os.getenv("QUOTES_LOCATION") # Should be markdown backtick block quotes
@@ -21,7 +36,7 @@ def choose_quote() -> str:
         return random.choice(quotes)
     return "Couldn't read quotes - lock_in.py"
 
-def get_time_remaining(end = datetime.datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)):
+def get_time_remaining():
     return end-datetime.datetime.now()
 
 def pretty_print_timedelta(td):
@@ -36,7 +51,10 @@ def pretty_print_timedelta(td):
         return f"{seconds}s"
 
 def main():
+    args = parse_arguments()
+
     start_time = datetime.datetime.now()
+    end = datetime.datetime.now().replace(hour=args.time, minute=0, second=0, microsecond=0)
 
     # Set up Gui
     term = Terminal()
@@ -62,7 +80,7 @@ def main():
             print(term.home())
             print(term.move_y(term.height//2))
 
-            time_remaining = get_time_remaining()
+            time_remaining = end - datetime.datetime.now()
 
             if time_remaining.total_seconds() < 0:
                 print(term.black_on_red(term.center("your time is up, if only there was more.")))
@@ -74,14 +92,12 @@ def main():
     time_worked = end_time-start_time
     print(term.move_down(2) + f'You worked for {pretty_print_timedelta(time_worked)}' )
 
+    if not args.debug:
+        with open("/Users/Harry/org/caverns/data/deep_work.csv", "a") as f:
+            writer = csv.writer(f)
+            writer.writerow([start_time, time_worked.total_seconds()])
 
-    with open("/Users/Harry/org/caverns/data/deep_work.csv", "a") as f:
-        writer = csv.writer(f)
-        writer.writerow([start_time, time_worked.total_seconds()])
-
-    print(f'Saved to logs.' )
-    
-
+        print(f'Saved to logs.' )
 
 if __name__ == "__main__":
     main()
